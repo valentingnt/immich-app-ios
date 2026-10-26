@@ -27,13 +27,14 @@ class LibraryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: CustomScrollView(
         slivers: [
-          ImmichSliverAppBar(snap: false, floating: false, pinned: true, showUploadButton: false),
-          _ActionButtonGrid(),
-          _CollectionCards(),
-          _QuickAccessButtonList(),
+          const ImmichSliverAppBar(snap: false, floating: false, pinned: true, showUploadButton: false),
+          const _ActionButtonGrid(),
+          const _CollectionCards(),
+          const _QuickAccessButtonList(),
+          SliverToBoxAdapter(child: SizedBox(height: context.padding.bottom)),
         ],
       ),
     );

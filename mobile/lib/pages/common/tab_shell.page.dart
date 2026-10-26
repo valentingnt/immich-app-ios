@@ -88,21 +88,24 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
           destinations: navigationDestinations,
           onSelected: (index) => _onNavigationSelected(tabsRouter, index, ref),
           child: PopScope(
-          canPop: tabsRouter.activeIndex == 0,
-          onPopInvokedWithResult: (didPop, _) => !didPop ? tabsRouter.setActiveIndex(0) : null,
-          child: Scaffold(
-            resizeToAvoidBottomInset: false,
-            body: isScreenLandscape
-                ? Row(
-                    children: [
-                      navigationRail(tabsRouter),
-                      const VerticalDivider(),
-                      Expanded(child: child),
-                    ],
-                  )
-                : child,
-            bottomNavigationBar: _BottomNavigationBar(tabsRouter: tabsRouter, destinations: navigationDestinations),
-          ),
+            canPop: tabsRouter.activeIndex == 0,
+            onPopInvokedWithResult: (didPop, _) => !didPop ? tabsRouter.setActiveIndex(0) : null,
+            child: Scaffold(
+              resizeToAvoidBottomInset: false,
+              body: isScreenLandscape
+                  ? Row(
+                      children: [
+                        navigationRail(tabsRouter),
+                        const VerticalDivider(),
+                        Expanded(child: child),
+                      ],
+                    )
+                  : child,
+              // Scaffold strips the body's bottom padding whenever a bottomNavigationBar is set.
+              bottomNavigationBar: watchNativeTabBarEnabled(ref)
+                  ? null
+                  : _BottomNavigationBar(tabsRouter: tabsRouter, destinations: navigationDestinations),
+            ),
           ),
         );
       },
@@ -142,7 +145,7 @@ void _onNavigationSelected(TabsRouter router, int index, WidgetRef ref) {
 class _BottomNavigationBar extends ConsumerStatefulWidget {
   const _BottomNavigationBar({required this.tabsRouter, required this.destinations});
 
-  final List<NavigationDestination> destinations;
+  final List<Widget> destinations;
   final TabsRouter tabsRouter;
 
   @override
@@ -175,7 +178,7 @@ class _BottomNavigationBarState extends ConsumerState<_BottomNavigationBar> {
   Widget build(BuildContext context) {
     final isScreenLandscape = context.orientation == Orientation.landscape;
 
-    if (isScreenLandscape || hideNavigationBar || watchNativeTabBarEnabled(ref)) {
+    if (isScreenLandscape || hideNavigationBar) {
       return const SizedBox.shrink();
     }
 

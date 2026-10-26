@@ -23,8 +23,7 @@ final nativeTabBarAvailableProvider = FutureProvider<bool>((ref) async {
 });
 
 /// Synchronous read for widgets. While unresolved on iOS, assume native to avoid a flash of the Flutter bar.
-bool watchNativeTabBarEnabled(WidgetRef ref) =>
-    ref.watch(nativeTabBarAvailableProvider).valueOrNull ?? Platform.isIOS;
+bool watchNativeTabBarEnabled(WidgetRef ref) => ref.watch(nativeTabBarAvailableProvider).valueOrNull ?? Platform.isIOS;
 
 /// SF Symbols, in the same order as the TabShell destinations.
 const _tabSymbols = ['photo.on.rectangle', 'magnifyingglass', 'rectangle.stack', 'square.grid.2x2'];

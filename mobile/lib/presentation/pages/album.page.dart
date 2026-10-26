@@ -56,6 +56,7 @@ class _AlbumsPageState extends ConsumerState<AlbumsPage> {
             unawaited(context.router.push(RemoteAlbumRoute(album: album)));
           },
         ),
+        SliverToBoxAdapter(child: SizedBox(height: context.padding.bottom)),
       ],
     );
 
