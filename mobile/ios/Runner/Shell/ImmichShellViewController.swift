@@ -15,6 +15,7 @@ class ImmichShellViewController: FlutterViewController {
   var onTabSelected: ((Int) -> Void)?
 
   private let tabBar = NativeTabBar()
+  private lazy var screens = NativeTabScreens(shell: self)
   private var state: NativeShellState?
 
   override func viewDidLoad() {
@@ -35,6 +36,7 @@ class ImmichShellViewController: FlutterViewController {
   func setTabs(_ tabs: [NativeTab]) {
     guard Self.isSupported else { return }
     tabBar.setTabs(tabs)
+    screens.update(tabs: tabs)
   }
 
   func apply(_ newState: NativeShellState) {
@@ -44,6 +46,7 @@ class ImmichShellViewController: FlutterViewController {
     state = newState
     tabBar.select(Int(newState.selectedIndex))
     tabBar.setVisible(newState.isShellVisible && !newState.isTabBarSuppressed, animated: animated)
+    screens.show(selectedIndex: Int(newState.selectedIndex), isShellVisible: newState.isShellVisible, animated: animated)
   }
 
   /// Reserves the space covered by native chrome so Flutter sees it as MediaQuery.padding.

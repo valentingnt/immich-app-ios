@@ -17,7 +17,10 @@ class NativeTab {
   final String symbol;
   final bool enabled;
 
-  const NativeTab({required this.label, required this.symbol, required this.enabled});
+  /// Id of a native screen shown in place of the Flutter page for this tab (e.g. "albums"), if any.
+  final String? nativeScreen;
+
+  const NativeTab({required this.label, required this.symbol, required this.enabled, this.nativeScreen});
 }
 
 /// Everything the native chrome needs to render, sent as one snapshot so updates are atomic.

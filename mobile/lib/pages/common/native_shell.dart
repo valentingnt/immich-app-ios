@@ -26,8 +26,14 @@ final nativeShellAvailableProvider = FutureProvider<bool>((ref) async {
 /// Synchronous read for widgets. While unresolved on iOS, assume native to avoid a flash of the Flutter bar.
 bool watchNativeShellEnabled(WidgetRef ref) => ref.watch(nativeShellAvailableProvider).valueOrNull ?? Platform.isIOS;
 
-/// SF Symbols, in the same order as the TabShell destinations.
-const _tabSymbols = ['photo.on.rectangle', 'magnifyingglass', 'rectangle.stack', 'square.grid.2x2'];
+/// Native appearance of each TabShell destination, in the same order.
+/// [nativeScreen] names a native screen that replaces the Flutter page while its tab is active.
+const _nativeTabs = [
+  (symbol: 'photo.on.rectangle', nativeScreen: null),
+  (symbol: 'magnifyingglass', nativeScreen: null),
+  (symbol: 'rectangle.stack', nativeScreen: 'albums'),
+  (symbol: 'square.grid.2x2', nativeScreen: null),
+];
 
 /// Mirrors the TabShell state onto the native chrome. Renders [child] unchanged.
 class NativeShell extends ConsumerStatefulWidget {
@@ -137,7 +143,12 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
 
     final tabs = [
       for (final (i, d) in widget.destinations.indexed)
-        NativeTab(label: d.label, symbol: _tabSymbols[i], enabled: d.enabled),
+        NativeTab(
+          label: d.label,
+          symbol: _nativeTabs[i].symbol,
+          enabled: d.enabled,
+          nativeScreen: _nativeTabs[i].nativeScreen,
+        ),
     ];
     if (!listEquals(tabs, _sentTabs)) {
       _sentTabs = tabs;
