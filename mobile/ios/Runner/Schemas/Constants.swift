@@ -169,7 +169,7 @@ enum AvatarColor: Int, QueryBindable {
 }
 
 enum AlbumUserRole: Int, QueryBindable {
-  case editor, viewer
+  case editor, viewer, owner
 }
 
 enum MemoryType: Int, QueryBindable {

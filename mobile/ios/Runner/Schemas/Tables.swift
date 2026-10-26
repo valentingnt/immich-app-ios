@@ -124,11 +124,10 @@ struct Person {
 struct RemoteAlbum {
   let id: String
   let createdAt: Date
-  let description: String?
+  let description: String
   let isActivityEnabled: Bool
   let name: String
   let order: Int
-  let ownerId: String
   let thumbnailAssetId: String?
   let updatedAt: Date
 }
