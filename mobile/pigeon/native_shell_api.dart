@@ -36,6 +36,19 @@ class NativeShellState {
   const NativeShellState({required this.selectedIndex, required this.isShellVisible, required this.isTabBarSuppressed});
 }
 
+enum NativeThemeMode { system, light, dark }
+
+/// The app's own theme settings, applied to every native view.
+class NativeAppearance {
+  final NativeThemeMode themeMode;
+
+  /// ARGB primary colors of the light and dark themes.
+  final int lightTint;
+  final int darkTint;
+
+  const NativeAppearance({required this.themeMode, required this.lightTint, required this.darkTint});
+}
+
 @HostApi()
 abstract class NativeShellHostApi {
   bool isAvailable();
@@ -43,6 +56,11 @@ abstract class NativeShellHostApi {
   void setTabs(List<NativeTab> tabs);
 
   void setState(NativeShellState state);
+
+  void setAppearance(NativeAppearance appearance);
+
+  /// Drift wrote to these tables (debounced). Native screens reading the database refresh on it.
+  void databaseDidChange(List<String> tables);
 }
 
 @FlutterApi()

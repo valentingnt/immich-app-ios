@@ -22,6 +22,7 @@ import native_video_player
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let messenger = engineBridge.applicationRegistrar.messenger()
     AppDelegate.registerPlugins(with: engineBridge.pluginRegistry, messenger: messenger)
+    NativeShellApis.register(messenger: messenger)
   }
 
   public static func registerPlugins(with registry: FlutterPluginRegistry, messenger: FlutterBinaryMessenger) {
@@ -32,7 +33,6 @@ import native_video_player
     BackgroundWorkerFgHostApiSetup.setUp(binaryMessenger: messenger, api: BackgroundWorkerApiImpl())
     ConnectivityApiSetup.setUp(binaryMessenger: messenger, api: ConnectivityApiImpl())
     NetworkApiSetup.setUp(binaryMessenger: messenger, api: NetworkApiImpl())
-    NativeShellHostApiSetup.setUp(binaryMessenger: messenger, api: NativeShellApiImpl(messenger: messenger))
   }
 
   public static func cancelPlugins(with engine: FlutterEngine) {

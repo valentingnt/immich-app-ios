@@ -49,10 +49,35 @@ class ImmichShellViewController: FlutterViewController {
     screens.show(selectedIndex: Int(newState.selectedIndex), isShellVisible: newState.isShellVisible, animated: animated)
   }
 
+  func apply(_ appearance: NativeAppearance) {
+    guard Self.isSupported else { return }
+    let style: UIUserInterfaceStyle = switch appearance.themeMode {
+    case .light: .light
+    case .dark: .dark
+    case .system: .unspecified
+    }
+    let light = UIColor(argb: appearance.lightTint)
+    let dark = UIColor(argb: appearance.darkTint)
+    let tint = UIColor { $0.userInterfaceStyle == .dark ? dark : light }
+    tabBar.apply(style: style, tint: tint)
+    screens.apply(style: style, tint: tint)
+  }
+
   /// Reserves the space covered by native chrome so Flutter sees it as MediaQuery.padding.
   private func updateSafeAreaInsets() {
     let bottom = tabBar.coveredHeight
     guard additionalSafeAreaInsets.bottom != bottom else { return }
     additionalSafeAreaInsets.bottom = bottom
+  }
+}
+
+private extension UIColor {
+  convenience init(argb: Int64) {
+    self.init(
+      red: CGFloat((argb >> 16) & 0xFF) / 255,
+      green: CGFloat((argb >> 8) & 0xFF) / 255,
+      blue: CGFloat(argb & 0xFF) / 255,
+      alpha: CGFloat((argb >> 24) & 0xFF) / 255
+    )
   }
 }

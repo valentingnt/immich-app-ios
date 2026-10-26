@@ -31,3 +31,24 @@ enum ShellDatabase {
   private static let lock = NSLock()
   nonisolated(unsafe) private static var pool: DatabasePool?
 }
+
+extension ShellDatabase {
+  private static let didChange = Notification.Name("ShellDatabase.didChange")
+  private static let tablesKey = "tables"
+
+  /// Called when Drift wrote to `tables` (from Dart, which owns every write).
+  static func notifyChange(tables: Set<String>) {
+    NotificationCenter.default.post(name: didChange, object: nil, userInfo: [tablesKey: tables])
+  }
+
+  /// Emits whenever one of `tables` changed. SQLite observation can't see writes made by Drift's own connection.
+  static func changes(affecting tables: Set<String>) -> AsyncStream<Void> {
+    AsyncStream { continuation in
+      let observer = NotificationCenter.default.addObserver(forName: didChange, object: nil, queue: nil) { notification in
+        guard let changed = notification.userInfo?[tablesKey] as? Set<String>, !changed.isDisjoint(with: tables) else { return }
+        continuation.yield()
+      }
+      continuation.onTermination = { _ in NotificationCenter.default.removeObserver(observer) }
+    }
+  }
+}

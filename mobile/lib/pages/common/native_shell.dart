@@ -8,7 +8,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/pages/common/native_albums.dart';
 import 'package:immich_mobile/platform/native_shell_api.g.dart';
+import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
+import 'package:immich_mobile/providers/theme.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 
 /// Whether the native iOS chrome (iOS 26+, Liquid Glass) replaces the Flutter one.
@@ -58,10 +62,13 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
   final _api = NativeShellHostApi();
   StackRouter? _rootRouter;
   StreamSubscription? _multiSelectSubscription;
+  StreamSubscription? _databaseSubscription;
+  NativeAlbumsBridge? _albums;
   bool _attached = false;
   bool _isMultiSelectEnabled = false;
   List<NativeTab>? _sentTabs;
   NativeShellState? _sentState;
+  NativeAppearance? _sentAppearance;
 
   bool get _available => ref.read(nativeShellAvailableProvider).valueOrNull ?? false;
 
@@ -81,6 +88,8 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
     }
     _attached = true;
     NativeShellFlutterApi.setUp(this);
+    _albums = NativeAlbumsBridge(ref, () => context);
+    _databaseSubscription = _watchDatabase();
     final rootRouter = ref.read(appRouterProvider);
     rootRouter.addListener(_sync);
     _rootRouter = rootRouter;
@@ -102,6 +111,8 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
     NativeShellRouteObserver.popupCount.removeListener(_sync);
     if (_attached) {
       NativeShellFlutterApi.setUp(null);
+      _albums?.dispose();
+      unawaited(_databaseSubscription?.cancel());
       _rootRouter?.removeListener(_sync);
       widget.tabsRouter.removeListener(_sync);
       final state = _sentState;
@@ -122,6 +133,34 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
 
   @override
   void onTabSelected(int index) => widget.onSelected(index);
+
+  /// Forwards Drift table changes, batched, so native screens reading the database can refresh.
+  StreamSubscription _watchDatabase() {
+    final pending = <String>{};
+    Timer? debounce;
+    return ref.read(driftProvider).tableUpdates().listen((updates) {
+      pending.addAll(updates.map((update) => update.table));
+      debounce?.cancel();
+      debounce = Timer(const Duration(milliseconds: 250), () {
+        final tables = pending.toList();
+        pending.clear();
+        unawaited(_api.databaseDidChange(tables));
+      });
+    });
+  }
+
+  NativeAppearance _computeAppearance() {
+    final theme = ref.read(immichThemeProvider);
+    return NativeAppearance(
+      themeMode: switch (ref.read(appConfigProvider).theme.mode) {
+        ThemeMode.light => NativeThemeMode.light,
+        ThemeMode.dark => NativeThemeMode.dark,
+        ThemeMode.system => NativeThemeMode.system,
+      },
+      lightTint: theme.light.primary.toARGB32(),
+      darkTint: theme.dark.primary.toARGB32(),
+    );
+  }
 
   /// The single place deciding what the native chrome shows.
   NativeShellState _computeState() {
@@ -155,6 +194,14 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
       unawaited(_api.setTabs(tabs));
     }
 
+    final appearance = _computeAppearance();
+    if (appearance != _sentAppearance) {
+      _sentAppearance = appearance;
+      unawaited(_api.setAppearance(appearance));
+    }
+
+    _albums?.sync(context);
+
     final state = _computeState();
     if (state != _sentState) {
       _sentState = state;
@@ -164,10 +211,13 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
 
   @override
   Widget build(BuildContext context) {
-    // Rebuilds on availability, locale (labels), readonly mode (destinations) and orientation.
+    // Rebuilds on availability, locale (labels), readonly mode (destinations), orientation,
+    // theme and settings.
     if (watchNativeShellEnabled(ref) && _available) {
       _attach();
       context.orientation;
+      ref.watch(immichThemeProvider);
+      ref.watch(appConfigProvider);
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
     }
     return widget.child;

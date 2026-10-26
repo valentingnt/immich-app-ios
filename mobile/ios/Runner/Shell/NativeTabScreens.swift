@@ -9,6 +9,7 @@ final class NativeTabScreens {
   /// Screens keyed by tab index. Kept alive while hidden to preserve scroll position and search.
   private var screens: [Int: (id: String, controller: UIViewController)] = [:]
   private var visibleIndex: Int?
+  private var appearance: (style: UIUserInterfaceStyle, tint: UIColor)?
 
   init(shell: UIViewController) {
     self.shell = shell
@@ -26,6 +27,18 @@ final class NativeTabScreens {
     for index in screens.keys where index >= tabs.count {
       remove(at: index)
     }
+  }
+
+  func apply(style: UIUserInterfaceStyle, tint: UIColor) {
+    appearance = (style, tint)
+    for (_, controller) in screens.values {
+      Self.apply(style: style, tint: tint, to: controller)
+    }
+  }
+
+  private static func apply(style: UIUserInterfaceStyle, tint: UIColor, to controller: UIViewController) {
+    controller.overrideUserInterfaceStyle = style
+    controller.view.tintColor = tint
   }
 
   /// Shows the screen of `selectedIndex` when the shell is visible, hides every other one.
@@ -78,6 +91,7 @@ final class NativeTabScreens {
       screenView.bottomAnchor.constraint(equalTo: shell.view.bottomAnchor),
     ])
     controller.didMove(toParent: shell)
+    if let appearance { Self.apply(style: appearance.style, tint: appearance.tint, to: controller) }
     screens[index] = (id, controller)
   }
 

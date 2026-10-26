@@ -30,4 +30,12 @@ class NativeShellApiImpl: NativeShellHostApi {
   func setState(state: NativeShellState) throws {
     shell?.apply(state)
   }
+
+  func setAppearance(appearance: NativeAppearance) throws {
+    shell?.apply(appearance)
+  }
+
+  func databaseDidChange(tables: [String]) throws {
+    ShellDatabase.notifyChange(tables: Set(tables))
+  }
 }

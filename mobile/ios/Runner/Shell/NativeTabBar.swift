@@ -43,6 +43,11 @@ final class NativeTabBar: NSObject, UITabBarDelegate {
     ])
   }
 
+  func apply(style: UIUserInterfaceStyle, tint: UIColor) {
+    container.overrideUserInterfaceStyle = style
+    tabBar.tintColor = tint
+  }
+
   func setTabs(_ tabs: [NativeTab]) {
     let selectedTag = tabBar.selectedItem?.tag ?? 0
     let items = tabs.enumerated().map { index, tab in
