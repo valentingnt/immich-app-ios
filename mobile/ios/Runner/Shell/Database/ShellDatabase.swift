@@ -52,3 +52,14 @@ extension ShellDatabase {
     }
   }
 }
+
+extension ShellDatabase {
+  /// e.g. `https://demo.immich.app/api`. Explicit column names: the @Table models in Schemas/ map
+  /// camelCase property names as is, which don't match Drift's snake_case columns.
+  static func serverEndpoint(_ db: Database) throws -> String? {
+    try #sql(
+      "SELECT string_value FROM store_entity WHERE id = \(StoreKey._serverEndpoint.rawValue)",
+      as: String?.self
+    ).fetchOne(db) ?? nil
+  }
+}
