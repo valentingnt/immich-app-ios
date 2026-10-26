@@ -20,15 +20,26 @@ class NativeTab {
   const NativeTab({required this.label, required this.symbol, required this.enabled});
 }
 
+/// Everything the native chrome needs to render, sent as one snapshot so updates are atomic.
+class NativeShellState {
+  final int selectedIndex;
+
+  /// False when the TabShell is not the visible screen (pushed route, popup, landscape, logged out).
+  final bool isShellVisible;
+
+  /// Hides the tab bar while the shell itself stays visible (multi-select).
+  final bool isTabBarSuppressed;
+
+  const NativeShellState({required this.selectedIndex, required this.isShellVisible, required this.isTabBarSuppressed});
+}
+
 @HostApi()
 abstract class NativeShellHostApi {
   bool isAvailable();
 
   void setTabs(List<NativeTab> tabs);
 
-  void setSelectedIndex(int index);
-
-  void setTabBarHidden(bool hidden, bool animated);
+  void setState(NativeShellState state);
 }
 
 @FlutterApi()

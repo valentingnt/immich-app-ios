@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
@@ -10,8 +11,8 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/platform/native_shell_api.g.dart';
 import 'package:immich_mobile/routing/router.dart';
 
-/// Whether the native iOS tab bar (iOS 26+, Liquid Glass) replaces the Flutter one.
-final nativeTabBarAvailableProvider = FutureProvider<bool>((ref) async {
+/// Whether the native iOS chrome (iOS 26+, Liquid Glass) replaces the Flutter one.
+final nativeShellAvailableProvider = FutureProvider<bool>((ref) async {
   if (!Platform.isIOS) {
     return false;
   }
@@ -23,14 +24,14 @@ final nativeTabBarAvailableProvider = FutureProvider<bool>((ref) async {
 });
 
 /// Synchronous read for widgets. While unresolved on iOS, assume native to avoid a flash of the Flutter bar.
-bool watchNativeTabBarEnabled(WidgetRef ref) => ref.watch(nativeTabBarAvailableProvider).valueOrNull ?? Platform.isIOS;
+bool watchNativeShellEnabled(WidgetRef ref) => ref.watch(nativeShellAvailableProvider).valueOrNull ?? Platform.isIOS;
 
 /// SF Symbols, in the same order as the TabShell destinations.
 const _tabSymbols = ['photo.on.rectangle', 'magnifyingglass', 'rectangle.stack', 'square.grid.2x2'];
 
-/// Mirrors the TabShell state onto the native tab bar. Renders [child] unchanged.
-class NativeTabBar extends ConsumerStatefulWidget {
-  const NativeTabBar({
+/// Mirrors the TabShell state onto the native chrome. Renders [child] unchanged.
+class NativeShell extends ConsumerStatefulWidget {
+  const NativeShell({
     super.key,
     required this.tabsRouter,
     required this.destinations,
@@ -44,20 +45,19 @@ class NativeTabBar extends ConsumerStatefulWidget {
   final Widget child;
 
   @override
-  ConsumerState<NativeTabBar> createState() => _NativeTabBarState();
+  ConsumerState<NativeShell> createState() => _NativeShellState();
 }
 
-class _NativeTabBarState extends ConsumerState<NativeTabBar> implements NativeShellFlutterApi {
+class _NativeShellState extends ConsumerState<NativeShell> implements NativeShellFlutterApi {
   final _api = NativeShellHostApi();
   StackRouter? _rootRouter;
   StreamSubscription? _multiSelectSubscription;
   bool _attached = false;
   bool _isMultiSelectEnabled = false;
-  bool? _lastHidden;
-  int? _lastSelectedIndex;
-  List<(String, bool)>? _lastTabs;
+  List<NativeTab>? _sentTabs;
+  NativeShellState? _sentState;
 
-  bool get _enabled => ref.read(nativeTabBarAvailableProvider).valueOrNull ?? false;
+  bool get _available => ref.read(nativeShellAvailableProvider).valueOrNull ?? false;
 
   @override
   void initState() {
@@ -70,7 +70,7 @@ class _NativeTabBarState extends ConsumerState<NativeTabBar> implements NativeSh
   }
 
   void _attach() {
-    if (_attached || !_enabled) {
+    if (_attached || !_available) {
       return;
     }
     _attached = true;
@@ -82,7 +82,7 @@ class _NativeTabBarState extends ConsumerState<NativeTabBar> implements NativeSh
   }
 
   @override
-  void didUpdateWidget(covariant NativeTabBar oldWidget) {
+  void didUpdateWidget(covariant NativeShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_attached && oldWidget.tabsRouter != widget.tabsRouter) {
       oldWidget.tabsRouter.removeListener(_sync);
@@ -98,7 +98,18 @@ class _NativeTabBarState extends ConsumerState<NativeTabBar> implements NativeSh
       NativeShellFlutterApi.setUp(null);
       _rootRouter?.removeListener(_sync);
       widget.tabsRouter.removeListener(_sync);
-      unawaited(_api.setTabBarHidden(true, false));
+      final state = _sentState;
+      if (state != null) {
+        unawaited(
+          _api.setState(
+            NativeShellState(
+              selectedIndex: state.selectedIndex,
+              isShellVisible: false,
+              isTabBarSuppressed: state.isTabBarSuppressed,
+            ),
+          ),
+        );
+      }
     }
     super.dispose();
   }
@@ -106,58 +117,44 @@ class _NativeTabBarState extends ConsumerState<NativeTabBar> implements NativeSh
   @override
   void onTabSelected(int index) => widget.onSelected(index);
 
+  /// The single place deciding what the native chrome shows.
+  NativeShellState _computeState() {
+    final isTabShellOnTop = _rootRouter?.stackData.lastOrNull?.name == TabShellRoute.name;
+    return NativeShellState(
+      selectedIndex: widget.tabsRouter.activeIndex,
+      isShellVisible:
+          isTabShellOnTop &&
+          NativeShellRouteObserver.popupCount.value == 0 &&
+          context.orientation == Orientation.portrait,
+      isTabBarSuppressed: _isMultiSelectEnabled,
+    );
+  }
+
   void _sync() {
     if (!mounted || !_attached) {
       return;
     }
 
-    final tabs = [for (final d in widget.destinations) (d.label, d.enabled)];
-    if (_lastTabs == null || !_sameTabs(tabs, _lastTabs!)) {
-      _lastTabs = tabs;
-      unawaited(
-        _api.setTabs([
-          for (final (i, (label, enabled)) in tabs.indexed)
-            NativeTab(label: label, symbol: _tabSymbols[i], enabled: enabled),
-        ]),
-      );
+    final tabs = [
+      for (final (i, d) in widget.destinations.indexed)
+        NativeTab(label: d.label, symbol: _tabSymbols[i], enabled: d.enabled),
+    ];
+    if (!listEquals(tabs, _sentTabs)) {
+      _sentTabs = tabs;
+      unawaited(_api.setTabs(tabs));
     }
 
-    final selectedIndex = widget.tabsRouter.activeIndex;
-    if (selectedIndex != _lastSelectedIndex) {
-      _lastSelectedIndex = selectedIndex;
-      unawaited(_api.setSelectedIndex(selectedIndex));
+    final state = _computeState();
+    if (state != _sentState) {
+      _sentState = state;
+      unawaited(_api.setState(state));
     }
-
-    final isTabShellOnTop = _rootRouter?.stackData.lastOrNull?.name == TabShellRoute.name;
-    final hidden =
-        _isMultiSelectEnabled ||
-        context.orientation == Orientation.landscape ||
-        !isTabShellOnTop ||
-        NativeShellRouteObserver.popupCount.value > 0;
-    if (hidden != _lastHidden) {
-      // Appear without animation the first time so the grid does not jump.
-      final animated = _lastHidden != null;
-      _lastHidden = hidden;
-      unawaited(_api.setTabBarHidden(hidden, animated));
-    }
-  }
-
-  static bool _sameTabs(List<(String, bool)> a, List<(String, bool)> b) {
-    if (a.length != b.length) {
-      return false;
-    }
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) {
-        return false;
-      }
-    }
-    return true;
   }
 
   @override
   Widget build(BuildContext context) {
     // Rebuilds on availability, locale (labels), readonly mode (destinations) and orientation.
-    if (watchNativeTabBarEnabled(ref) && _enabled) {
+    if (watchNativeShellEnabled(ref) && _available) {
       _attach();
       context.orientation;
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
@@ -166,7 +163,7 @@ class _NativeTabBarState extends ConsumerState<NativeTabBar> implements NativeSh
   }
 }
 
-/// Counts popup routes (dialogs, bottom sheets) above the TabShell, which would otherwise render under the native bar.
+/// Counts popup routes (dialogs, bottom sheets) above the TabShell, which would otherwise render under the native chrome.
 class NativeShellRouteObserver extends NavigatorObserver {
   /// Shared across instances: auto_route may create one observer per navigator.
   static final popupCount = ValueNotifier<int>(0);

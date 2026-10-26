@@ -8,7 +8,7 @@ import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
-import 'package:immich_mobile/pages/common/native_tab_bar.dart';
+import 'package:immich_mobile/pages/common/native_shell.dart';
 import 'package:immich_mobile/presentation/pages/search/paginated_search.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
@@ -83,7 +83,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
       transitionBuilder: (context, child, animation) => FadeTransition(opacity: animation, child: child),
       builder: (context, child) {
         final tabsRouter = AutoTabsRouter.of(context);
-        return NativeTabBar(
+        return NativeShell(
           tabsRouter: tabsRouter,
           destinations: navigationDestinations,
           onSelected: (index) => _onNavigationSelected(tabsRouter, index, ref),
@@ -102,7 +102,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
                     )
                   : child,
               // Scaffold strips the body's bottom padding whenever a bottomNavigationBar is set.
-              bottomNavigationBar: watchNativeTabBarEnabled(ref)
+              bottomNavigationBar: watchNativeShellEnabled(ref)
                   ? null
                   : _BottomNavigationBar(tabsRouter: tabsRouter, destinations: navigationDestinations),
             ),

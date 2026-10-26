@@ -10,9 +10,8 @@ class NativeShellApiImpl: NativeShellHostApi {
 
   // Plugins are registered before the window scene connects, so resolve the root controller lazily.
   private var shell: ImmichShellViewController? {
-    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-    let shell = scenes.flatMap(\.windows).lazy.compactMap { $0.rootViewController as? ImmichShellViewController }.first
-    if let shell, shell.onTabSelected == nil {
+    guard let shell = ImmichShellViewController.current else { return nil }
+    if shell.onTabSelected == nil {
       shell.onTabSelected = { [flutterApi] index in
         flutterApi.onTabSelected(index: Int64(index)) { _ in }
       }
@@ -25,14 +24,10 @@ class NativeShellApiImpl: NativeShellHostApi {
   }
 
   func setTabs(tabs: [NativeTab]) throws {
-    shell?.setTabs(tabs.map { (label: $0.label, symbol: $0.symbol, enabled: $0.enabled) })
+    shell?.setTabs(tabs)
   }
 
-  func setSelectedIndex(index: Int64) throws {
-    shell?.setSelectedIndex(Int(index))
-  }
-
-  func setTabBarHidden(hidden: Bool, animated: Bool) throws {
-    shell?.setTabBarHidden(hidden, animated: animated)
+  func setState(state: NativeShellState) throws {
+    shell?.apply(state)
   }
 }
