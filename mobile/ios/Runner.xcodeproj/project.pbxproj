@@ -180,6 +180,13 @@
 			path = Utility;
 			sourceTree = "<group>";
 		};
+		5E11A00000000000000000A1 /* Shell */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = Shell;
+			sourceTree = "<group>";
+		};
 		FEE084F22EC172080045228E /* Schemas */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -287,6 +294,7 @@
 			children = (
 				FE1BB4562F8319560087DBF9 /* Utility */,
 				FEE084F22EC172080045228E /* Schemas */,
+				5E11A00000000000000000A1 /* Shell */,
 				B231F52D2E93A44A00BC45D1 /* Core */,
 				B25D37792E72CA15008B6CA7 /* Connectivity */,
 				B21E34A62E5AF9760031FDB9 /* Background */,
@@ -386,6 +394,7 @@
 				B231F52D2E93A44A00BC45D1 /* Core */,
 				B2CF7F8C2DDE4EBB00744BF6 /* Sync */,
 				FEE084F22EC172080045228E /* Schemas */,
+				5E11A00000000000000000A1 /* Shell */,
 			);
 			name = Runner;
 			packageProductDependencies = (
