@@ -8,6 +8,7 @@ import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
+import 'package:immich_mobile/pages/common/native_tab_bar.dart';
 import 'package:immich_mobile/presentation/pages/search/paginated_search.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
@@ -82,7 +83,11 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
       transitionBuilder: (context, child, animation) => FadeTransition(opacity: animation, child: child),
       builder: (context, child) {
         final tabsRouter = AutoTabsRouter.of(context);
-        return PopScope(
+        return NativeTabBar(
+          tabsRouter: tabsRouter,
+          destinations: navigationDestinations,
+          onSelected: (index) => _onNavigationSelected(tabsRouter, index, ref),
+          child: PopScope(
           canPop: tabsRouter.activeIndex == 0,
           onPopInvokedWithResult: (didPop, _) => !didPop ? tabsRouter.setActiveIndex(0) : null,
           child: Scaffold(
@@ -97,6 +102,7 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
                   )
                 : child,
             bottomNavigationBar: _BottomNavigationBar(tabsRouter: tabsRouter, destinations: navigationDestinations),
+          ),
           ),
         );
       },
@@ -136,7 +142,7 @@ void _onNavigationSelected(TabsRouter router, int index, WidgetRef ref) {
 class _BottomNavigationBar extends ConsumerStatefulWidget {
   const _BottomNavigationBar({required this.tabsRouter, required this.destinations});
 
-  final List<Widget> destinations;
+  final List<NavigationDestination> destinations;
   final TabsRouter tabsRouter;
 
   @override
@@ -169,7 +175,7 @@ class _BottomNavigationBarState extends ConsumerState<_BottomNavigationBar> {
   Widget build(BuildContext context) {
     final isScreenLandscape = context.orientation == Orientation.landscape;
 
-    if (isScreenLandscape || hideNavigationBar) {
+    if (isScreenLandscape || hideNavigationBar || watchNativeTabBarEnabled(ref)) {
       return const SizedBox.shrink();
     }
 
