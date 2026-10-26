@@ -100,4 +100,7 @@ abstract class NativeAlbumsFlutterApi {
   void deleteAlbum(String albumId);
 
   void savePreferences(NativeAlbumsPreferences preferences);
+
+  /// "1 item", "505 items"… with Dart's plural rules, in the same order as [counts].
+  List<String> formatItemCounts(List<int> counts);
 }

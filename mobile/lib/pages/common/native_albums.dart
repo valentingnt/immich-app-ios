@@ -24,6 +24,7 @@ class NativeAlbumsBridge implements NativeAlbumsFlutterApi {
   final BuildContext Function() _context;
   final _api = NativeAlbumsHostApi();
   NativeAlbumsConfiguration? _sent;
+  Future<void> _pendingSave = Future.value();
 
   void dispose() => NativeAlbumsFlutterApi.setUp(null);
 
@@ -95,7 +96,18 @@ class NativeAlbumsBridge implements NativeAlbumsFlutterApi {
   Future<void> deleteAlbum(String albumId) => _ref.read(remoteAlbumProvider.notifier).deleteAlbum(albumId);
 
   @override
-  Future<void> savePreferences(NativeAlbumsPreferences preferences) async {
+  List<String> formatItemCounts(List<int> counts) {
+    final t = _context().t;
+    return [for (final count in counts) t.items_count(count: count)];
+  }
+
+  /// Serialized: SettingsRepository.write compares against its snapshot before awaiting the write,
+  /// so overlapping saves from quick taps would leave the database and the snapshot out of sync.
+  @override
+  Future<void> savePreferences(NativeAlbumsPreferences preferences) =>
+      _pendingSave = _pendingSave.then((_) => _writePreferences(preferences));
+
+  Future<void> _writePreferences(NativeAlbumsPreferences preferences) async {
     final settings = _ref.read(settingsProvider);
     await settings.write(.albumSortMode, AlbumSortMode.values.byName(preferences.sortMode.name));
     await settings.write(.albumIsReverse, preferences.isReverse);

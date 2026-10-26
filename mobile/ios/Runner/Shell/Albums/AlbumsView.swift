@@ -10,10 +10,10 @@ struct AlbumsView: View {
       content
         .navigationTitle(model.strings?.title ?? "")
         .navigationBarTitleDisplayMode(.large)
-        // At the top: iOS 26 would otherwise put it in the bottom toolbar, under the shell's tab bar.
+        // In the navigation bar: iOS 26 would otherwise put it in the bottom toolbar, under the shell's tab bar.
         .searchable(
           text: $model.searchText,
-          placement: .navigationBarDrawer(displayMode: .always),
+          placement: .navigationBarDrawer,
           prompt: model.strings?.searchPrompt ?? ""
         )
         .refreshable { await model.bridge.refresh() }
@@ -166,8 +166,8 @@ private struct AlbumSubtitle: View {
   let model: AlbumsModel
 
   var body: some View {
-    // Count only: Dart's plural rules (items_count) stay on the Dart side.
-    Text("\(album.assetCount.formatted()) · \(model.ownership(of: album))")
+    let count = model.bridge.itemCount(album.assetCount) ?? album.assetCount.formatted()
+    Text("\(count) · \(model.ownership(of: album))")
       .font(.subheadline)
       .foregroundStyle(.secondary)
       .lineLimit(1)

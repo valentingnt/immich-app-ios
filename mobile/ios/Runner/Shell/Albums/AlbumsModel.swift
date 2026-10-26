@@ -16,8 +16,6 @@ final class AlbumsModel {
   var searchText = ""
   var filter = Filter.all
   private(set) var serverEndpoint: String?
-  /// Changes made here, until Dart's configuration catches up.
-  private var localPreferences: NativeAlbumsPreferences?
   @ObservationIgnored private let database: DatabasePool
   @ObservationIgnored private var observation: Task<Void, Never>?
 
@@ -43,7 +41,7 @@ final class AlbumsModel {
   var sortOptions: [NativeAlbumSortOption] { bridge.configuration?.sortOptions ?? [] }
 
   var preferences: NativeAlbumsPreferences {
-    localPreferences ?? bridge.configuration?.preferences
+    bridge.configuration?.preferences
       ?? NativeAlbumsPreferences(sortMode: .mostRecent, isReverse: true, isGrid: false)
   }
 
@@ -89,7 +87,6 @@ final class AlbumsModel {
   }
 
   private func save(_ preferences: NativeAlbumsPreferences) {
-    localPreferences = preferences
     bridge.savePreferences(preferences)
   }
 
