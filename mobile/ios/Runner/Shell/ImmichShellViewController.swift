@@ -6,8 +6,8 @@ import UIKit
 class ImmichShellViewController: FlutterViewController {
   var onTabSelected: ((Int) -> Void)?
 
-  private let tabBarHost = TabBarHostController()
-  private var tabBar: UITabBar { tabBarHost.tabBar }
+  private let tabBar = UITabBar()
+  private let tabBarContainer = PassthroughView()
   private var isTabBarHidden = true
   private var tabBarInset: CGFloat = 0
 
@@ -20,24 +20,36 @@ class ImmichShellViewController: FlutterViewController {
     super.viewDidLoad()
     guard Self.isSupported else { return }
 
-    addChild(tabBarHost)
-    let hostView = tabBarHost.view!
-    hostView.translatesAutoresizingMaskIntoConstraints = false
-    hostView.isHidden = true
-    view.addSubview(hostView)
-    NSLayoutConstraint.activate([
-      hostView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      hostView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      hostView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-    ])
-    tabBarHost.didMove(toParent: self)
+    tabBarContainer.isHidden = true
+    tabBarContainer.translatesAutoresizingMaskIntoConstraints = false
+    tabBar.translatesAutoresizingMaskIntoConstraints = false
     tabBar.delegate = self
+    tabBarContainer.addSubview(tabBar)
+    NSLayoutConstraint.activate([
+      tabBar.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor),
+      tabBar.trailingAnchor.constraint(equalTo: tabBarContainer.trailingAnchor),
+      tabBar.topAnchor.constraint(equalTo: tabBarContainer.topAnchor),
+      tabBar.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor),
+    ])
   }
 
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
     guard Self.isSupported else { return }
+    attachTabBarIfNeeded()
     updateSafeAreaInsets()
+  }
+
+  /// The bar lives in the window, right above the Flutter view (and below UIKit modals presented later):
+  /// inside the Flutter view it would inherit the inset it reserves, and lay its items out above itself.
+  private func attachTabBarIfNeeded() {
+    guard tabBarContainer.superview == nil, let window = view.window else { return }
+    window.insertSubview(tabBarContainer, aboveSubview: view)
+    NSLayoutConstraint.activate([
+      tabBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      tabBarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      tabBarContainer.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+    ])
   }
 
   // MARK: - Tab bar API
@@ -62,22 +74,22 @@ class ImmichShellViewController: FlutterViewController {
   func setTabBarHidden(_ hidden: Bool, animated: Bool) {
     guard Self.isSupported, hidden != isTabBarHidden else { return }
     isTabBarHidden = hidden
-    let hostView = tabBarHost.view!
+    let container = tabBarContainer
 
-    let offset = hostView.bounds.height
+    let offset = container.bounds.height
     if !hidden {
-      hostView.isHidden = false
-      if animated { hostView.transform = CGAffineTransform(translationX: 0, y: offset) }
+      container.isHidden = false
+      if animated { container.transform = CGAffineTransform(translationX: 0, y: offset) }
     }
 
     let changes = {
-      hostView.transform = hidden ? CGAffineTransform(translationX: 0, y: offset) : .identity
+      container.transform = hidden ? CGAffineTransform(translationX: 0, y: offset) : .identity
       self.updateSafeAreaInsets()
     }
     let completion = { (_: Bool) in
       if self.isTabBarHidden {
-        hostView.isHidden = true
-        hostView.transform = .identity
+        container.isHidden = true
+        container.transform = .identity
       }
     }
 
@@ -93,13 +105,11 @@ class ImmichShellViewController: FlutterViewController {
   /// Reserves the space covered by the tab bar so Flutter sees it as MediaQuery.padding.bottom.
   private func updateSafeAreaInsets() {
     let deviceBottom = view.window?.safeAreaInsets.bottom ?? 0
-    let barHeight = tabBarHost.view.bounds.height
+    let barHeight = tabBarContainer.bounds.height
     let inset = isTabBarHidden ? 0 : max(0, barHeight - deviceBottom)
     guard inset != tabBarInset else { return }
     tabBarInset = inset
     additionalSafeAreaInsets.bottom = inset
-    // The host must not inherit the inset it creates, or the bar would grow with it.
-    tabBarHost.additionalSafeAreaInsets.bottom = -inset
   }
 }
 
@@ -107,24 +117,6 @@ extension ImmichShellViewController: UITabBarDelegate {
   func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
     // Called on re-selection too; Dart handles scroll-to-top / search focus.
     onTabSelected?(item.tag)
-  }
-}
-
-private final class TabBarHostController: UIViewController {
-  let tabBar = UITabBar()
-
-  override func loadView() {
-    let view = PassthroughView()
-    view.backgroundColor = .clear
-    tabBar.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(tabBar)
-    NSLayoutConstraint.activate([
-      tabBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      tabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      tabBar.topAnchor.constraint(equalTo: view.topAnchor),
-      tabBar.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-    ])
-    self.view = view
   }
 }
 
