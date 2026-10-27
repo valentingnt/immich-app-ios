@@ -9,6 +9,7 @@ import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/pages/common/native_albums.dart';
+import 'package:immich_mobile/pages/common/native_route_host.dart';
 import 'package:immich_mobile/platform/native_shell_api.g.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
@@ -65,6 +66,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
   StreamSubscription? _multiSelectSubscription;
   StreamSubscription? _databaseSubscription;
   NativeAlbumsBridge? _albums;
+  NativeRouteHost? _routes;
   bool _attached = false;
   bool _isMultiSelectEnabled = false;
   List<NativeTab>? _sentTabs;
@@ -89,6 +91,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
     }
     _attached = true;
     NativeShellFlutterApi.setUp(this);
+    _routes = NativeRouteHost(ref, _api, onChanged: _sync);
     _albums = NativeAlbumsBridge(ref, () => context);
     _databaseSubscription = _watchDatabase();
     final rootRouter = ref.read(appRouterProvider);
@@ -113,6 +116,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
     if (_attached) {
       NativeShellFlutterApi.setUp(null);
       _albums?.dispose();
+      _routes?.dispose();
       unawaited(_databaseSubscription?.cancel());
       _rootRouter?.removeListener(_sync);
       widget.tabsRouter.removeListener(_sync);
@@ -136,6 +140,12 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
 
   @override
   void onTabSelected(int index) => widget.onSelected(index);
+
+  @override
+  Future<bool> openRoute(NativeRoute route) => _routes?.push(route) ?? Future.value(false);
+
+  @override
+  void hostedRouteClosed() => _routes?.closedByNative();
 
   @override
   void onHostedRouteChanged(bool isHosted, double barHeight) {
@@ -180,9 +190,9 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
           NativeShellRouteObserver.popupCount.value == 0 &&
           context.orientation == Orientation.portrait,
       isTabBarSuppressed: _isMultiSelectEnabled,
-      isHostingRoute: _albums?.isHostingRoute ?? false,
+      isHostingRoute: _routes?.isHosting ?? false,
       // Popups (dialogs, sheets) are not in the router stack but cover the hosted page too.
-      isHostedRouteOnTop: (_albums?.isHostedRouteOnTop ?? false) && NativeShellRouteObserver.popupCount.value == 0,
+      isHostedRouteOnTop: (_routes?.isHostedRouteOnTop ?? false) && NativeShellRouteObserver.popupCount.value == 0,
     );
   }
 

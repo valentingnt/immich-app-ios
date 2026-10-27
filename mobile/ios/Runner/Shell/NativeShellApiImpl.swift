@@ -8,6 +8,7 @@ class NativeShellApiImpl: NativeShellHostApi {
     flutterApi = NativeShellFlutterApi(binaryMessenger: messenger)
     guard #available(iOS 26, *) else { return }
     MainActor.assumeIsolated {
+      FlutterRouteHost.shared.flutterApi = flutterApi
       FlutterRouteHost.shared.onHostedRouteChange = { [flutterApi] isHosted, barHeight in
         flutterApi.onHostedRouteChanged(isHosted: isHosted, barHeight: barHeight) { _ in }
       }
@@ -43,5 +44,10 @@ class NativeShellApiImpl: NativeShellHostApi {
 
   func databaseDidChange(tables: [String]) throws {
     ShellDatabase.notifyChange(tables: Set(tables))
+  }
+
+  func closeHostedRoute() throws {
+    guard #available(iOS 26, *) else { return }
+    MainActor.assumeIsolated { FlutterRouteHost.shared.closeRequested() }
   }
 }

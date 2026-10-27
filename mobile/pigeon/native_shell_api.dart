@@ -49,6 +49,14 @@ class NativeShellState {
   });
 }
 
+/// A Flutter route a native screen asks to open, by its name in Dart's registry of hostable routes.
+class NativeRoute {
+  final String name;
+  final Map<String, String> arguments;
+
+  const NativeRoute({required this.name, required this.arguments});
+}
+
 enum NativeThemeMode { system, light, dark }
 
 /// The app's own theme settings, applied to every native view.
@@ -74,11 +82,21 @@ abstract class NativeShellHostApi {
 
   /// Drift wrote to these tables (debounced). Native screens reading the database refresh on it.
   void databaseDidChange(List<String> tables);
+
+  /// The hosted route was popped on the Dart side (e.g. its own back button): pop it natively.
+  void closeHostedRoute();
 }
 
 @FlutterApi()
 abstract class NativeShellFlutterApi {
   void onTabSelected(int index);
+
+  /// Pushes [route], ready to be shown by native navigation once this returns true.
+  @async
+  bool openRoute(NativeRoute route);
+
+  /// Native navigation popped the hosted route: drop it (and anything opened from it).
+  void hostedRouteClosed();
 
   /// A route is (or is no longer) hosted by native navigation, under a native bar of [barHeight]
   /// (0 while that bar is hidden).

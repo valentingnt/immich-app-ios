@@ -82,20 +82,10 @@ class NativeAlbumsConfiguration {
 @HostApi()
 abstract class NativeAlbumsHostApi {
   void configure(NativeAlbumsConfiguration configuration);
-
-  /// The natively hosted album route was popped on the Dart side (e.g. its back button).
-  void closeAlbum();
 }
 
 @FlutterApi()
 abstract class NativeAlbumsFlutterApi {
-  /// Pushes the album route, ready to be shown by native navigation once this returns true.
-  @async
-  bool openAlbum(String albumId);
-
-  /// Native navigation popped the hosted album: drop its route (and anything above it).
-  void albumClosed();
-
   void createAlbum();
 
   void openProfile();

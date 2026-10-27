@@ -26,6 +26,11 @@ final class FlutterRouteHost {
   /// Reports whether a route is hosted and the height of the native bar above it (0 when hidden).
   @ObservationIgnored var onHostedRouteChange: ((_ isHosted: Bool, _ barHeight: Double) -> Void)?
 
+  @ObservationIgnored var flutterApi: NativeShellFlutterApi?
+
+  /// Pops the hosted route from the native stack that shows it.
+  @ObservationIgnored private var dismiss: (() -> Void)?
+
   /// The hosted route is the top Flutter route: native bar shown. Otherwise Flutter routes pushed
   /// from it (viewer, options…) are on screen and own the whole view, back gesture included.
   var isHostedRouteOnTop = true
@@ -35,18 +40,35 @@ final class FlutterRouteHost {
 
   var isHosting: Bool { container != nil }
 
-  /// Moves the engine to a new view controller, to be pushed right away.
-  func begin(onEnded: @escaping () -> Void) -> FlutterRouteContainer? {
-    guard container == nil, let shell = ImmichShellViewController.current else { return nil }
+  /// Asks Dart to push `route`, hidden under the native screen, then moves the engine to a new
+  /// view controller already showing it. On `true`, the caller pushes `container` right away;
+  /// `dismiss` pops it when Dart closes the route from its side.
+  func open(_ route: NativeRoute, dismiss: @escaping () -> Void) async -> Bool {
+    guard container == nil, let flutterApi else { return false }
+    let isPushed = await withCheckedContinuation { continuation in
+      flutterApi.openRoute(route: route) { continuation.resume(returning: (try? $0.get()) ?? false) }
+    }
+    guard isPushed else { return false }
+    guard begin() else {
+      flutterApi.hostedRouteClosed { _ in }
+      return false
+    }
+    self.dismiss = dismiss
+    return true
+  }
+
+  /// Dart popped the hosted route itself.
+  func closeRequested() {
+    dismiss?()
+  }
+
+  private func begin() -> Bool {
+    guard container == nil, let shell = ImmichShellViewController.current else { return false }
     let flutter = hostedFlutter ?? FlutterViewController(engine: shell.engine, nibName: nil, bundle: nil)
     hostedFlutter = flutter
     shell.engine.viewController = flutter
-    let container = FlutterRouteContainer(flutter: flutter) { [weak self] in
-      self?.end()
-      onEnded()
-    }
-    self.container = container
-    return container
+    container = FlutterRouteContainer(flutter: flutter) { [weak self] in self?.end() }
+    return true
   }
 
   fileprivate func barHeightDidChange(_ height: Double) {
@@ -57,6 +79,8 @@ final class FlutterRouteHost {
   private func end() {
     guard container != nil, let shell = ImmichShellViewController.current else { return }
     container = nil
+    let dismiss = self.dismiss
+    self.dismiss = nil
     shell.engine.viewController = shell
     // The hosted controller tore down the rendering surface and reported the app inactive when it
     // disappeared. The shell, on screen all along, never reappears to restore them: replay its
@@ -67,6 +91,10 @@ final class FlutterRouteHost {
     shell.view.setNeedsLayout()
     shell.view.layoutIfNeeded()
     onHostedRouteChange?(false, 0)
+    // Native navigation popped: keep the caller's path in step (no-op if it already is), and let Dart
+    // drop the route (no-op if Dart popped first).
+    dismiss?()
+    flutterApi?.hostedRouteClosed { _ in }
   }
 }
 

@@ -6,13 +6,9 @@ struct AlbumsView: View {
   @State private var pendingDeletion: AlbumSummary?
 
   var body: some View {
-    NavigationStack(path: $model.path) {
+    NavigationStack(path: $model.routes.path) {
       content
-        .navigationDestination(for: String.self) { _ in
-          if let container = FlutterRouteHost.shared.container {
-            FlutterRouteView(container: container)
-          }
-        }
+        .flutterRouteDestination()
         .navigationTitle(model.strings?.title ?? "")
         .navigationBarTitleDisplayMode(.large)
         // In the navigation bar: iOS 26 would otherwise put it in the bottom toolbar, under the shell's tab bar.

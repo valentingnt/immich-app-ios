@@ -47,7 +47,7 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
-    final nativeBarHeight = NativeHostableRoute.isHosted(context) ? ref.watch(nativeHostBarHeightProvider) : null;
+    final nativeBarHeight = NativeHostableRoute.watchBarHeight(context, ref);
 
     final currentAlbum = ref.watch(currentRemoteAlbumProvider);
     if (currentAlbum == null) {
@@ -128,15 +128,7 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
       ),
     );
 
-    // Hosted by native navigation (iOS): line up with the native bar drawn above.
-    if (nativeBarHeight == null) {
-      return appBar;
-    }
-    final mediaQuery = MediaQuery.of(context);
-    return MediaQuery(
-      data: mediaQuery.copyWith(padding: mediaQuery.padding.copyWith(top: mediaQuery.padding.top - nativeBarHeight)),
-      child: appBar,
-    );
+    return NativeHostableRoute.underNativeBar(context, nativeBarHeight, appBar);
   }
 }
 
