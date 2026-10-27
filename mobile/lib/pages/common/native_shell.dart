@@ -13,6 +13,7 @@ import 'package:immich_mobile/platform/native_shell_api.g.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/theme.provider.dart';
+import 'package:immich_mobile/routing/native_hostable_route.dart';
 import 'package:immich_mobile/routing/router.dart';
 
 /// Whether the native iOS chrome (iOS 26+, Liquid Glass) replaces the Flutter one.
@@ -123,6 +124,8 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
               selectedIndex: state.selectedIndex,
               isShellVisible: false,
               isTabBarSuppressed: state.isTabBarSuppressed,
+              isHostingRoute: false,
+              isHostedRouteOnTop: false,
             ),
           ),
         );
@@ -133,6 +136,11 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
 
   @override
   void onTabSelected(int index) => widget.onSelected(index);
+
+  @override
+  void onHostedRouteChanged(bool isHosted, double barHeight) {
+    ref.read(nativeHostBarHeightProvider.notifier).state = isHosted ? barHeight : null;
+  }
 
   /// Forwards Drift table changes, batched, so native screens reading the database can refresh.
   StreamSubscription _watchDatabase() {
@@ -172,6 +180,9 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
           NativeShellRouteObserver.popupCount.value == 0 &&
           context.orientation == Orientation.portrait,
       isTabBarSuppressed: _isMultiSelectEnabled,
+      isHostingRoute: _albums?.isHostingRoute ?? false,
+      // Popups (dialogs, sheets) are not in the router stack but cover the hosted page too.
+      isHostedRouteOnTop: (_albums?.isHostedRouteOnTop ?? false) && NativeShellRouteObserver.popupCount.value == 0,
     );
   }
 

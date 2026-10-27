@@ -33,7 +33,20 @@ class NativeShellState {
   /// Hides the tab bar while the shell itself stays visible (multi-select).
   final bool isTabBarSuppressed;
 
-  const NativeShellState({required this.selectedIndex, required this.isShellVisible, required this.isTabBarSuppressed});
+  /// A Flutter route is hosted by native navigation: native screens stay visible under it.
+  final bool isHostingRoute;
+
+  /// The hosted route is the top Flutter route (no route or popup above it), so the native bar,
+  /// back button and back-swipe apply to it.
+  final bool isHostedRouteOnTop;
+
+  const NativeShellState({
+    required this.selectedIndex,
+    required this.isShellVisible,
+    required this.isTabBarSuppressed,
+    required this.isHostingRoute,
+    required this.isHostedRouteOnTop,
+  });
 }
 
 enum NativeThemeMode { system, light, dark }
@@ -66,4 +79,8 @@ abstract class NativeShellHostApi {
 @FlutterApi()
 abstract class NativeShellFlutterApi {
   void onTabSelected(int index);
+
+  /// A route is (or is no longer) hosted by native navigation, under a native bar of [barHeight]
+  /// (0 while that bar is hidden).
+  void onHostedRouteChanged(bool isHosted, double barHeight);
 }

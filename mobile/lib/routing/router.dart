@@ -75,6 +75,7 @@ import 'package:immich_mobile/providers/api.provider.dart';
 import 'package:immich_mobile/routing/auth_guard.dart';
 import 'package:immich_mobile/routing/duplicate_guard.dart';
 import 'package:immich_mobile/routing/locked_guard.dart';
+import 'package:immich_mobile/routing/native_hostable_route.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/services/auth.service.dart';
 import 'package:immich_mobile/services/local_auth.service.dart';
@@ -147,7 +148,11 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: BackupAlbumSelectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: LocalTimelineRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: MainTimelineRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: RemoteAlbumRoute.page, guards: [_authGuard]),
+    AutoRoute(
+      page: RemoteAlbumRoute.page,
+      guards: [_authGuard],
+      type: RouteType.custom(customRouteBuilder: NativeHostableRoute.builder),
+    ),
     AutoRoute(
       page: AssetViewerRoute.page,
       guards: [_authGuard, _duplicateGuard],

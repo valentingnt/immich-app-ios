@@ -6,6 +6,12 @@ class NativeShellApiImpl: NativeShellHostApi {
 
   init(messenger: FlutterBinaryMessenger) {
     flutterApi = NativeShellFlutterApi(binaryMessenger: messenger)
+    guard #available(iOS 26, *) else { return }
+    MainActor.assumeIsolated {
+      FlutterRouteHost.shared.onHostedRouteChange = { [flutterApi] isHosted, barHeight in
+        flutterApi.onHostedRouteChanged(isHosted: isHosted, barHeight: barHeight) { _ in }
+      }
+    }
   }
 
   // Plugins are registered before the window scene connects, so resolve the root controller lazily.

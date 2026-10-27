@@ -13,6 +13,7 @@ import 'package:immich_mobile/providers/infrastructure/current_album.provider.da
 import 'package:immich_mobile/providers/infrastructure/remote_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
+import 'package:immich_mobile/routing/native_hostable_route.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/album/remote_album_shared_user_icons.dart';
 
@@ -46,6 +47,7 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
+    final nativeBarHeight = NativeHostableRoute.isHosted(context) ? ref.watch(nativeHostBarHeightProvider) : null;
 
     final currentAlbum = ref.watch(currentRemoteAlbumProvider);
     if (currentAlbum == null) {
@@ -61,13 +63,13 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
         const Shadow(offset: Offset(0, 2), blurRadius: 0, color: Colors.transparent),
     ];
 
-    return SliverAppBar(
+    final appBar = SliverAppBar(
       expandedHeight: 400.0,
       floating: false,
       pinned: true,
       snap: false,
       elevation: 0,
-      leading: isMultiSelectEnabled
+      leading: isMultiSelectEnabled || nativeBarHeight != null
           ? const SizedBox.shrink()
           : IconButton(
               icon: Icon(
@@ -124,6 +126,16 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
           );
         },
       ),
+    );
+
+    // Hosted by native navigation (iOS): line up with the native bar drawn above.
+    if (nativeBarHeight == null) {
+      return appBar;
+    }
+    final mediaQuery = MediaQuery.of(context);
+    return MediaQuery(
+      data: mediaQuery.copyWith(padding: mediaQuery.padding.copyWith(top: mediaQuery.padding.top - nativeBarHeight)),
+      child: appBar,
     );
   }
 }

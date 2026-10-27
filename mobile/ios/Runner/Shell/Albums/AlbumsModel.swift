@@ -15,6 +15,8 @@ final class AlbumsModel {
   let bridge: AlbumsBridge
   var searchText = ""
   var filter = Filter.all
+  /// Native navigation: the id of the album shown as a hosted Flutter route, if any.
+  var path: [String] = []
   private(set) var serverEndpoint: String?
   @ObservationIgnored private let database: DatabasePool
   @ObservationIgnored private var observation: Task<Void, Never>?
@@ -35,6 +37,30 @@ final class AlbumsModel {
 
   deinit {
     observation?.cancel()
+  }
+
+  // MARK: Navigation
+
+  /// Pushes the Flutter album page natively (see FlutterRouteHost): Dart pushes the route first,
+  /// hidden under this screen, then the engine moves to the pushed controller already showing it.
+  func openAlbum(_ id: String) {
+    guard path.isEmpty, !isOpeningAlbum else { return }
+    isOpeningAlbum = true
+    Task {
+      defer { isOpeningAlbum = false }
+      guard await bridge.openAlbum(id),
+            FlutterRouteHost.shared.begin(onEnded: { [weak self] in self?.albumDidClose() }) != nil
+      else { return }
+      bridge.onCloseRequested = { [weak self] in self?.path.removeAll() }
+      path = [id]
+    }
+  }
+
+  @ObservationIgnored private var isOpeningAlbum = false
+
+  private func albumDidClose() {
+    path.removeAll()
+    bridge.albumClosed()
   }
 
   var strings: NativeAlbumsStrings? { bridge.configuration?.strings }

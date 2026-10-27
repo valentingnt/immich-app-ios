@@ -13,8 +13,24 @@ final class AlbumsBridge {
   @ObservationIgnored private var requestedItemCounts: Set<Int> = []
   @ObservationIgnored private var isRequestingItemCounts = false
 
-  func openAlbum(_ id: String) {
-    flutterApi?.openAlbum(albumId: id) { _ in }
+  /// Set by the screen while an album is hosted; Dart asks to close it when its route was popped there.
+  @ObservationIgnored var onCloseRequested: (() -> Void)?
+
+  /// Asks Dart to push the album route; `true` once it is rendered and can be shown natively.
+  func openAlbum(_ id: String) async -> Bool {
+    guard let flutterApi else { return false }
+    return await withCheckedContinuation { continuation in
+      flutterApi.openAlbum(albumId: id) { continuation.resume(returning: (try? $0.get()) ?? false) }
+    }
+  }
+
+  func albumClosed() {
+    onCloseRequested = nil
+    flutterApi?.albumClosed { _ in }
+  }
+
+  fileprivate func closeAlbum() {
+    onCloseRequested?()
   }
 
   func createAlbum() {
@@ -91,6 +107,11 @@ class NativeAlbumsApiImpl: NativeAlbumsHostApi {
 
   init(messenger: FlutterBinaryMessenger) {
     flutterApi = NativeAlbumsFlutterApi(binaryMessenger: messenger)
+  }
+
+  func closeAlbum() throws {
+    guard #available(iOS 26, *) else { return }
+    MainActor.assumeIsolated { AlbumsBridge.shared.closeAlbum() }
   }
 
   func configure(configuration: NativeAlbumsConfiguration) throws {

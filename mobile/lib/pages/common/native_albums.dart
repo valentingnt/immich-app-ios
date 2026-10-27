@@ -9,6 +9,7 @@ import 'package:immich_mobile/providers/album/album_sort_by_options.provider.dar
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
+import 'package:immich_mobile/routing/native_hostable_route.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/common/app_bar_dialog/app_bar_dialog.dart';
 
@@ -26,7 +27,10 @@ class NativeAlbumsBridge implements NativeAlbumsFlutterApi {
   NativeAlbumsConfiguration? _sent;
   Future<void> _pendingSave = Future.value();
 
-  void dispose() => NativeAlbumsFlutterApi.setUp(null);
+  void dispose() {
+    NativeAlbumsFlutterApi.setUp(null);
+    _ref.read(appRouterProvider).removeListener(_closeIfCovered);
+  }
 
   /// Sends the configuration if any part of it changed.
   void sync(BuildContext context) {
@@ -74,12 +78,65 @@ class NativeAlbumsBridge implements NativeAlbumsFlutterApi {
     );
   }
 
+  /// The album route pushed for native navigation (see FlutterRouteHost), while it is in the stack.
+  bool get isHostingRoute => _isHostingRoute;
+  bool _isHostingRoute = false;
+
+  /// Whether the hosted album is the top route, so that the native back-swipe may pop it.
+  bool get isHostedRouteOnTop =>
+      _isHostingRoute && _ref.read(appRouterProvider).stackData.lastOrNull?.name == RemoteAlbumRoute.name;
+
   @override
-  Future<void> openAlbum(String albumId) async {
+  Future<bool> openAlbum(String albumId) async {
     final album = await _ref.read(remoteAlbumServiceProvider).get(albumId);
-    if (album != null) {
-      unawaited(_ref.read(appRouterProvider).push(RemoteAlbumRoute(album: album)));
+    if (album == null) {
+      return false;
     }
+    final router = _ref.read(appRouterProvider);
+    _isHostingRoute = true;
+    router.addListener(_closeIfCovered);
+    NativeHostableRoute.pushForNativeHost = true;
+    // Completes once the route is popped, from either side.
+    final popped = router.push(RemoteAlbumRoute(album: album));
+    unawaited(popped.whenComplete(_hostedRouteEnded));
+    // Rendered, so that the engine shows the album as soon as it moves to the native stack.
+    await WidgetsBinding.instance.endOfFrame;
+    return true;
+  }
+
+  void _hostedRouteEnded() {
+    if (!_isHostingRoute) {
+      return;
+    }
+    _isHostingRoute = false;
+    _ref.read(appRouterProvider).removeListener(_closeIfCovered);
+    // No-op when native navigation popped first.
+    unawaited(_api.closeAlbum());
+  }
+
+  /// Some flows go "back" to a tab by pushing it, e.g. AlbumsRoute after deleting the album, which
+  /// stacks a second TabShell above the hosted album. With native navigation that means closing the
+  /// album: keep the original TabShell, drop everything above it.
+  void _closeIfCovered() {
+    final router = _ref.read(appRouterProvider);
+    final stack = router.stackData;
+    final shellIndex = stack.indexWhere((route) => route.name == TabShellRoute.name);
+    final hostedIndex = stack.indexWhere((route) => route.name == RemoteAlbumRoute.name, shellIndex + 1);
+    if (shellIndex < 0 || hostedIndex < 0 || !stack.skip(hostedIndex + 1).any((r) => r.name == TabShellRoute.name)) {
+      return;
+    }
+    final above = stack.sublist(shellIndex + 1).toSet();
+    router.removeWhere(above.contains);
+    _hostedRouteEnded();
+  }
+
+  @override
+  void albumClosed() {
+    if (!_isHostingRoute) {
+      return;
+    }
+    // The album page is already off screen: drop it and whatever was opened from it.
+    _ref.read(appRouterProvider).popUntilRouteWithName(TabShellRoute.name);
   }
 
   @override

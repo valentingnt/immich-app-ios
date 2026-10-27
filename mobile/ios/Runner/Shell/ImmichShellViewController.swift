@@ -46,7 +46,16 @@ class ImmichShellViewController: FlutterViewController {
     state = newState
     tabBar.select(Int(newState.selectedIndex))
     tabBar.setVisible(newState.isShellVisible && !newState.isTabBarSuppressed, animated: animated)
-    screens.show(selectedIndex: Int(newState.selectedIndex), isShellVisible: newState.isShellVisible, animated: animated)
+    // A hosted Flutter route was pushed by a native screen, which must stay under it.
+    screens.show(
+      selectedIndex: Int(newState.selectedIndex),
+      isShellVisible: newState.isShellVisible || newState.isHostingRoute,
+      animated: animated
+    )
+    guard #available(iOS 26, *) else { return }
+    let host = FlutterRouteHost.shared
+    host.isHostedRouteOnTop = !newState.isHostingRoute || newState.isHostedRouteOnTop
+    host.showsBackButton = !newState.isTabBarSuppressed
   }
 
   func apply(_ appearance: NativeAppearance) {

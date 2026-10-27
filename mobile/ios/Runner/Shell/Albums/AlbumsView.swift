@@ -6,8 +6,13 @@ struct AlbumsView: View {
   @State private var pendingDeletion: AlbumSummary?
 
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $model.path) {
       content
+        .navigationDestination(for: String.self) { _ in
+          if let container = FlutterRouteHost.shared.container {
+            FlutterRouteView(container: container)
+          }
+        }
         .navigationTitle(model.strings?.title ?? "")
         .navigationBarTitleDisplayMode(.large)
         // In the navigation bar: iOS 26 would otherwise put it in the bottom toolbar, under the shell's tab bar.
@@ -42,7 +47,7 @@ struct AlbumsView: View {
       ScrollView {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16)], spacing: 20) {
           ForEach(albums) { album in
-            Button { model.bridge.openAlbum(album.id) } label: { AlbumCell(album: album, model: model) }
+            Button { model.openAlbum(album.id) } label: { AlbumCell(album: album, model: model) }
               .buttonStyle(.plain)
               .contextMenu { menu(for: album) }
           }
@@ -51,7 +56,7 @@ struct AlbumsView: View {
       }
     } else {
       List(albums) { album in
-        Button { model.bridge.openAlbum(album.id) } label: { AlbumRow(album: album, model: model) }
+        Button { model.openAlbum(album.id) } label: { AlbumRow(album: album, model: model) }
           .contextMenu { menu(for: album) }
           .swipeActions {
             if model.isOwned(album) {
