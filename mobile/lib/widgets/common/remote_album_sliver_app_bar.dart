@@ -47,7 +47,6 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
-    final nativeBarHeight = NativeHostableRoute.watchBarHeight(context, ref);
 
     final currentAlbum = ref.watch(currentRemoteAlbumProvider);
     if (currentAlbum == null) {
@@ -63,13 +62,13 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
         const Shadow(offset: Offset(0, 2), blurRadius: 0, color: Colors.transparent),
     ];
 
-    final appBar = SliverAppBar(
+    return SliverAppBar(
       expandedHeight: 400.0,
       floating: false,
       pinned: true,
       snap: false,
       elevation: 0,
-      leading: isMultiSelectEnabled || nativeBarHeight != null
+      leading: isMultiSelectEnabled || NativeHostableRoute.isHosted(context)
           ? const SizedBox.shrink()
           : IconButton(
               icon: Icon(
@@ -127,8 +126,6 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
         },
       ),
     );
-
-    return NativeHostableRoute.underNativeBar(context, nativeBarHeight, appBar);
   }
 }
 

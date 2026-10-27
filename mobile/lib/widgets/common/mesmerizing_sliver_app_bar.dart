@@ -8,6 +8,7 @@ import 'package:immich_mobile/presentation/widgets/sliver_app_bar/item_count_tex
 import 'package:immich_mobile/presentation/widgets/sliver_app_bar/random_asset_background_image.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
+import 'package:immich_mobile/routing/native_hostable_route.dart';
 
 class MesmerizingSliverAppBar extends ConsumerStatefulWidget {
   const MesmerizingSliverAppBar({super.key, required this.title});
@@ -36,9 +37,11 @@ class _MesmerizingSliverAppBarState extends ConsumerState<MesmerizingSliverAppBa
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
+    // The native bar has the back button when native navigation hosts the page.
+    final hidesLeading = isMultiSelectEnabled || NativeHostableRoute.isHosted(context);
     Widget hideWhenSelecting(Widget child) => IgnorePointer(
-      ignoring: isMultiSelectEnabled,
-      child: AnimatedOpacity(duration: Durations.medium1, opacity: isMultiSelectEnabled ? 0 : 1, child: child),
+      ignoring: hidesLeading,
+      child: AnimatedOpacity(duration: Durations.medium1, opacity: hidesLeading ? 0 : 1, child: child),
     );
 
     return SliverAppBar(

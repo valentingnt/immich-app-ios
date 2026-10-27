@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/platform/native_shell_api.g.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/user.provider.dart';
+import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/native_hostable_route.dart';
 import 'package:immich_mobile/routing/router.dart';
 
@@ -17,7 +19,29 @@ final Map<String, NativeRouteResolver> nativeRoutes = {
     final album = await ref.read(remoteAlbumServiceProvider).get(arguments['id']!);
     return album == null ? null : RemoteAlbumRoute(album: album);
   },
+  'favorites': _fixed(const FavoriteRoute()),
+  'archive': _fixed(const ArchiveRoute()),
+  'trash': _fixed(const TrashRoute()),
+  'sharedLinks': _fixed(const SharedLinkRoute()),
+  'folders': _fixed(FolderRoute()),
+  'people': _fixed(const PeopleCollectionRoute()),
+  'places': _fixed(PlaceRoute(currentLocation: null)),
+  'localAlbums': _fixed(const LocalAlbumsRoute()),
+  'memories': _fixed(const MemoryListRoute()),
+  'partners': _fixed(const PartnerRoute()),
+  'partner': (ref, arguments) async {
+    final userId = ref.read(currentUserProvider)?.id;
+    if (userId == null) {
+      return null;
+    }
+    final partners = await ref.read(partnerServiceProvider).search(userId, .sharedWith).first;
+    final partner = partners.where((partner) => partner.id == arguments['id']).firstOrNull;
+    return partner == null ? null : PartnerDetailRoute(partner: partner);
+  },
 };
+
+NativeRouteResolver _fixed(PageRouteInfo route) =>
+    (_, _) async => route;
 
 /// Dart side of FlutterRouteHost (iOS): pushes the routes native navigation asks for and keeps the
 /// router in step with the native stack showing them. One route is hosted at a time.
