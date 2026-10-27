@@ -53,6 +53,9 @@ final class NativeTabScreens {
     let previous = visibleIndex.flatMap { screens[$0]?.controller?.view }
     let next = target.flatMap(controller(at:))?.view
     visibleIndex = target
+    // Native screens appear at once, like UITabBarController tabs (the Flutter page under them is
+    // not painted, see NativeShell); only fading out reveals the Flutter page again.
+    let animated = animated && next == nil
 
     next?.alpha = animated ? 0 : 1
     next?.isHidden = false
@@ -88,6 +91,7 @@ final class NativeTabScreens {
     guard #available(iOS 26, *) else { return nil }
     return switch id {
     case "albums": AlbumsScreen.make()
+    case "library": LibraryScreen.make()
     default: nil
     }
   }

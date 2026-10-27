@@ -113,7 +113,9 @@ struct AlbumsView: View {
       Button(model.strings?.createAlbum ?? "", systemImage: "plus") { model.bridge.createAlbum() }
     }
     ToolbarItem {
-      Button { model.bridge.openProfile() } label: { ProfileAvatar(model: model) }
+      Button { model.bridge.openProfile() } label: {
+        ProfileAvatar(serverEndpoint: model.serverEndpoint, userId: model.bridge.configuration?.currentUserId)
+      }
     }
   }
 }
@@ -207,32 +209,5 @@ private struct AlbumThumbnail: View {
           image = loaded
         }
       }
-  }
-}
-
-@available(iOS 26, *)
-private struct ProfileAvatar: View {
-  let model: AlbumsModel
-  @State private var image: UIImage?
-
-  private var url: URL? {
-    guard let serverEndpoint = model.serverEndpoint, let userId = model.bridge.configuration?.currentUserId else { return nil }
-    return ShellImageLoader.profileImageURL(serverEndpoint: serverEndpoint, userId: userId)
-  }
-
-  var body: some View {
-    Group {
-      if let image {
-        Image(uiImage: image).resizable().scaledToFill()
-          .frame(width: 30, height: 30)
-          .clipShape(.circle)
-      } else {
-        Image(systemName: "person.crop.circle")
-      }
-    }
-    .task(id: url) {
-      guard let url else { return }
-      image = await ShellImageLoader.shared.image(for: url, maxPixelSize: 96)
-    }
   }
 }

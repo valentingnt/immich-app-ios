@@ -11,6 +11,7 @@ enum LibrarySummary {
   static let observedTables: Set<String> = [
     "person_entity", "asset_face_entity", "remote_asset_entity", "memory_entity", "memory_asset_entity",
     "local_album_entity", "local_album_asset_entity", "local_asset_entity", "partner_entity", "user_entity",
+    "remote_exif_entity",
   ]
 
   /// Mirrors PersonDao.watchAll: visible people with enough visible faces on timeline assets, or a name.
@@ -94,6 +95,26 @@ enum LibrarySummary {
     LIMIT \(previewCount)
     """,
     as: LocalAlbum.self
+  )
+
+  /// Where the newest geotagged timeline photo was taken: centres the Places preview.
+  @Selection
+  struct Place: Hashable {
+    let latitude: Double
+    let longitude: Double
+  }
+
+  static let lastPlace = #sql(
+    """
+    SELECT exif.latitude, exif.longitude
+    FROM remote_exif_entity exif
+    JOIN remote_asset_entity asset ON asset.id = exif.asset_id
+    WHERE exif.latitude IS NOT NULL AND exif.longitude IS NOT NULL
+      AND asset.deleted_at IS NULL AND asset.visibility = \(AssetVisibility.timeline)
+    ORDER BY asset.created_at DESC
+    LIMIT 1
+    """,
+    as: Place.self
   )
 
   /// Mirrors DriftPartnerRepository.search(.sharedWith): users sharing their photos with the user.

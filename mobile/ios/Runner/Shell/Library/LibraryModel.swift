@@ -15,6 +15,7 @@ final class LibraryModel {
   private(set) var memories: [LibrarySummary.Memory] = []
   private(set) var localAlbums: [LibrarySummary.LocalAlbum] = []
   private(set) var partners: [LibrarySummary.Partner] = []
+  private(set) var lastPlace: LibrarySummary.Place?
   private(set) var serverEndpoint: String?
 
   @ObservationIgnored private let database: DatabasePool
@@ -67,6 +68,7 @@ final class LibraryModel {
             ? [] : try LibrarySummary.memories(ownerId: userId!).fetchAll(db),
           localAlbums: try LibrarySummary.localAlbums.fetchAll(db),
           partners: try userId.map { try LibrarySummary.partners(userId: $0).fetchAll(db) } ?? [],
+          lastPlace: try LibrarySummary.lastPlace.fetchOne(db),
           serverEndpoint: try ShellDatabase.serverEndpoint(db)
         )
       }
@@ -74,6 +76,7 @@ final class LibraryModel {
       memories = result.memories
       localAlbums = result.localAlbums
       partners = result.partners
+      if lastPlace != result.lastPlace { lastPlace = result.lastPlace }
       serverEndpoint = result.serverEndpoint
     } catch {
       // Keep the previous previews: the next change notification retries.

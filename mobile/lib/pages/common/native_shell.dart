@@ -39,7 +39,7 @@ const _nativeTabs = [
   (symbol: 'photo.on.rectangle', nativeScreen: null),
   (symbol: 'magnifyingglass', nativeScreen: null),
   (symbol: 'rectangle.stack', nativeScreen: 'albums'),
-  (symbol: 'square.grid.2x2', nativeScreen: null),
+  (symbol: 'square.grid.2x2', nativeScreen: 'library'),
 ];
 
 /// Mirrors the TabShell state onto the native chrome. Renders [child] unchanged.
@@ -74,6 +74,11 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
   List<NativeTab>? _sentTabs;
   NativeShellState? _sentState;
   NativeAppearance? _sentAppearance;
+
+  /// The active tab's page is covered by its native screen: it stays built (it shows again in
+  /// landscape or when a route is pushed) but is not painted, so that its platform views, such as
+  /// the Library map, do not show above the native screen.
+  bool _isPageCovered = false;
 
   bool get _available => ref.read(nativeShellAvailableProvider).valueOrNull ?? false;
 
@@ -233,6 +238,14 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
       _sentState = state;
       unawaited(_api.setState(state));
     }
+    _updateCoverage(state);
+  }
+
+  void _updateCoverage(NativeShellState state) {
+    final isCovered = state.isShellVisible && _nativeTabs[state.selectedIndex].nativeScreen != null;
+    if (isCovered != _isPageCovered) {
+      setState(() => _isPageCovered = isCovered);
+    }
   }
 
   @override
@@ -247,7 +260,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
       NativeLibraryBridge.watchSources(ref);
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
     }
-    return widget.child;
+    return Visibility(visible: !_isPageCovered, maintainState: true, child: widget.child);
   }
 }
 
