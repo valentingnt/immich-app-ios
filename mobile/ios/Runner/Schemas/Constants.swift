@@ -172,6 +172,10 @@ enum AlbumUserRole: Int, QueryBindable {
   case editor, viewer, owner
 }
 
+enum AssetVisibility: Int, QueryBindable {
+  case timeline, hidden, archive, locked
+}
+
 enum MemoryType: Int, QueryBindable {
   case onThisDay
 }

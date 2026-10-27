@@ -9,6 +9,7 @@ import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/pages/common/native_albums.dart';
+import 'package:immich_mobile/pages/common/native_library.dart';
 import 'package:immich_mobile/pages/common/native_route_host.dart';
 import 'package:immich_mobile/platform/native_shell_api.g.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
@@ -66,6 +67,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
   StreamSubscription? _multiSelectSubscription;
   StreamSubscription? _databaseSubscription;
   NativeAlbumsBridge? _albums;
+  NativeLibraryBridge? _library;
   NativeRouteHost? _routes;
   bool _attached = false;
   bool _isMultiSelectEnabled = false;
@@ -93,6 +95,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
     NativeShellFlutterApi.setUp(this);
     _routes = NativeRouteHost(ref, _api, onChanged: _sync);
     _albums = NativeAlbumsBridge(ref, () => context);
+    _library = NativeLibraryBridge(ref, () => context);
     _databaseSubscription = _watchDatabase();
     final rootRouter = ref.read(appRouterProvider);
     rootRouter.addListener(_sync);
@@ -116,6 +119,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
     if (_attached) {
       NativeShellFlutterApi.setUp(null);
       _albums?.dispose();
+      _library?.dispose();
       _routes?.dispose();
       unawaited(_databaseSubscription?.cancel());
       _rootRouter?.removeListener(_sync);
@@ -222,6 +226,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
     }
 
     _albums?.sync(context);
+    _library?.sync(context);
 
     final state = _computeState();
     if (state != _sentState) {
@@ -239,6 +244,7 @@ class _NativeShellState extends ConsumerState<NativeShell> implements NativeShel
       context.orientation;
       ref.watch(immichThemeProvider);
       ref.watch(appConfigProvider);
+      NativeLibraryBridge.watchSources(ref);
       WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
     }
     return widget.child;

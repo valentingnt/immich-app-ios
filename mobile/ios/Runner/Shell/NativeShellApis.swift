@@ -6,5 +6,6 @@ enum NativeShellApis {
   static func register(messenger: FlutterBinaryMessenger) {
     NativeShellHostApiSetup.setUp(binaryMessenger: messenger, api: NativeShellApiImpl(messenger: messenger))
     NativeAlbumsHostApiSetup.setUp(binaryMessenger: messenger, api: NativeAlbumsApiImpl(messenger: messenger))
+    NativeLibraryHostApiSetup.setUp(binaryMessenger: messenger, api: NativeLibraryApiImpl(messenger: messenger))
   }
 }
